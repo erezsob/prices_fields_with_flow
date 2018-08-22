@@ -6,41 +6,32 @@ import { withStyles } from "@material-ui/core/styles";
 import _ from "lodash";
 
 import { calcGross, calcPurchase, calcMargin, calcNet } from "./utils";
-import "./styles.css";
 
 const cleanEmpty = obj => _.pickBy(obj, Boolean);
-const isTrue = obj => Object.values(obj).filter(x => x === true).length;
 
-const generateNewState = (newVal, field, state) => {
-  // console.log('newVal', newVal)
+const generateNewState = _.curry((field, state, newVal) => {
   const newState = cleanEmpty({ ...state, [`${field}`]: newVal });
-  const obj = {
+  return {
     purchase: calcPurchase(newState, field),
     margin: calcMargin(newState, field),
     net: calcNet(newState, field),
     gross: calcGross(newState, field)
   };
-  obj[field] = newVal;
-  // console.log("newState", obj);
-  return obj;
-};
+});
 
-const handleChange = (e, field, state, changeState) => {
-  const newVal =
-    typeof Number(e.target.value) === "number" ? e.target.value : "";
-  console.log("newVal", newVal);
-  const newState = generateNewState(newVal, field, state);
-  changeState(newState);
-};
+const handleChange = (e, field, state, changeState) =>
+  _.flow(
+    v => (Number(v) ? v : ""),
+    generateNewState(field, state),
+    changeState
+  )(e.target.value);
 
-const NumberField = props => (
-  <TextField type="text" style={{ width: 100 }} {...props} />
-);
+const Field = props => <TextField style={{ width: 100 }} {...props} />;
 
 const Purchase = ({ fields, setState, focused, ...rest }) => {
   const newFields = cleanEmpty(fields);
   return (
-    <NumberField
+    <Field
       value={fields.purchase}
       onChange={e => handleChange(e, "purchase", newFields, setState)}
       placeholder="Purchase"
@@ -72,7 +63,7 @@ const Margin = ({ fields, setState, ...rest }) => {
 const Net = ({ fields, setState, ...rest }) => {
   const newFields = cleanEmpty(fields);
   return (
-    <NumberField
+    <Field
       value={fields.net}
       onChange={e => handleChange(e, "net", newFields, setState)}
       placeholder="Net"
@@ -82,13 +73,13 @@ const Net = ({ fields, setState, ...rest }) => {
 };
 
 const Tax = ({ fields, setState, ...rest }) => {
-  return <NumberField value={fields.tax} placeholder="Tax (%)" {...rest} />;
+  return <Field value={fields.tax} placeholder="Tax (%)" {...rest} />;
 };
 
 const Gross = ({ fields, setState, ...rest }) => {
   const newFields = cleanEmpty(fields);
   return (
-    <NumberField
+    <Field
       value={fields.gross}
       onChange={e => handleChange(e, "gross", newFields, setState)}
       placeholder="Gross"
@@ -135,15 +126,7 @@ class App extends Component {
 
   state = this.initialState;
 
-  handleChange = field => (e, calculatedValue) => {
-    // console.log("field", field);
-    // console.log("e", e.target.value);
-    this.setState({ [`${field}`]: e.target.value }, () => {
-      console.log("state after", this.state);
-    });
-  };
-
-  changeState = obj => {
+  handleChange = obj => {
     this.setState(
       state => ({ ...obj }),
       () => {
@@ -165,28 +148,28 @@ class App extends Component {
             <Purchase
               data-testid="purchase"
               fields={this.state}
-              setState={this.changeState}
+              setState={this.handleChange}
             />
             <Margin
               data-testid="margin"
               fields={this.state}
-              setState={this.changeState}
+              setState={this.handleChange}
             />
             <Net
               data-testid="net"
               fields={this.state}
-              setState={this.changeState}
+              setState={this.handleChange}
             />
             <Tax
               data-testid="tax"
               fields={this.state}
-              setState={this.changeState}
+              setState={this.handleChange}
               disabled
             />
             <Gross
               data-testid="gross"
               fields={this.state}
-              setState={this.changeState}
+              setState={this.handleChange}
             />
           </div>
           <div className={classes.resetContainer}>
